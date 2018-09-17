@@ -1,0 +1,173 @@
+#!/usr/bin/env sh
+#
+# git-shelf -- Better workflow for storing temporary changes
+#
+# To report bugs, request features, or contribute:
+# https://github.com/git-scripts/library
+#
+# Copyright 2017 @git-scripts
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is furnished
+# to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+
+
+usage() {
+    bold=$(tput bold)
+    italic=$(tput sitm)
+    reset=$(tput sgr0)
+
+    echo
+    echo "${bold}USAGE${reset}"
+    echo "    git shelf [-u REMOTE, --use-remote REMOTE]"
+    echo
+    echo "${bold}OPTIONS${reset}"
+    echo "    -u REMOTE, --use-remote REMOTE"
+    echo "        Default: ${italic}origin${reset}"
+    echo "        Push the shelf branch the repository at REMOTE."
+}
+
+
+log() {
+    prefix="git-shelf"
+
+    case "$1" in
+        info)
+            shift
+            echo "${prefix}: info: $*"
+            ;;
+        error)
+            shift
+            echo "${prefix}: error: $*"
+            ;;
+        fatal)
+            shift
+            echo "${prefix}: fatal: $*"
+            exit 1
+            ;;
+    esac
+}
+
+
+# Display usage and exit if one of the help
+# commands/flags is passed as the first argument.
+case "$1" in
+    -h|--help|help)
+        usage
+        exit 1
+        ;;
+esac
+
+
+# Exit if a `git` command doesn't exist in the user's PATH or
+# if we're not in a git repository. This is useful to keep
+# in case the script is ran directly, instead of through the git CLI.
+if  ! command -v git > /dev/null 2>&1 ||\
+    ! command git rev-parse --git-dir > /dev/null 2>&1;\
+    then exit; fi
+
+
+# Parse flags and options
+parse_error=0
+REMOTE_NAME="origin"
+for i in "$@"; do
+    case "$i" in
+        -u|--use-remote)
+            REMOTE_NAME="$2"
+            if [ -z "$REMOTE_NAME" ] || [ "${REMOTE_NAME%${REMOTE_NAME#?}}" = '-' ]; then
+                parse_error=1
+                log error "$1 requires the name of a remote as an argument."
+            elif ! command git ls-remote "$REMOTE_NAME" > /dev/null 2>&1; then
+                parse_error=1
+                log error "Remote '$REMOTE_NAME' is invalid, or you do not have the correct access rights."
+            fi
+            shift 2
+            ;;
+        -*)
+            parse_error=1
+            log error "Unknown option '$1'"
+            shift
+            ;;
+    esac
+done
+
+
+# Exit the script if there were errors parsing the arguments
+if [ $parse_error -eq 1 ]; then
+    echo
+    echo "It looks like there were some errors."
+    echo "Try \`git shelf help\` to see the help."
+    exit
+fi
+
+
+# Get the name or hash of the ref currently checked out
+ref=$(git symbolic-ref -q --short HEAD || \
+      git rev-parse --short HEAD 2>&1)
+
+
+# Get the user email, exit if empty
+user=$(git config --get user.email)
+[ -z "$user" ] && log fatal "Unable to determine valid 'user.email' from git configuration."
+
+
+# Create the shelf branch name
+shelf="shelf/$user/$ref"
+
+
+# If the local ref has already been shelved, we want
+# to amend the shelf commit and force push the branch to
+# the remote. Note that the -u option is overridden if
+# the value differs from the remote that the shelf
+# already exists on.
+amend=""
+force=""
+if command git config --get branch."$ref".shelf > /dev/null 2>&1; then
+    amend="--amend"
+    force="--force"
+    shelf_remote=$(git branch --all |\
+            grep "$shelf" |\
+            sed 's/^\s*remotes\/\([a-zA-Z0-9]\+\)\/.*/\1/')
+
+    [ -z "$shelf_remote" ] &&\
+        log fatal "$ref is marked as already shelved, but '$shelf' isn't on a remote.'"
+
+    if [ "$REMOTE_NAME" != "$shelf_remote" ]; then
+        REMOTE_NAME="$shelf_remote"
+        log info "$ref is already shelved on $shelf_remote."
+        log info "Amending and force pushing to $shelf_remote/$shelf."
+    fi
+else
+    # Error out if the branch already exists on a remote
+    command git fetch --quiet --all
+    remote_shelf=$(command git branch --all | grep "$shelf")
+
+    [ -n "$remote_shelf" ] &&\
+        log fatal "$ref is already shelved, but it looks like you might be out of sync locally."
+fi
+
+
+# Proceed only if we can successfully create a commit.
+# Failing this means the user doesn't have anything to shelf,
+# and should instead simply run `git push`.
+git add -A
+if command git -c commit.gpgsign=false commit $amend -m "SHELF"; then
+    # Create the shelf branch on the remote
+    # and update the shelf configuration key if successful
+    git push "$REMOTE_NAME" $force "$ref":"$shelf" && \
+    git config --local branch."$ref".shelf true
+fi

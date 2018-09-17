@@ -1,0 +1,96 @@
+#!/usr/bin/env sh
+#
+# git-unshelf -- Better workflow for un-storing temporary changes
+#
+# To report bugs, request features, or contribute:
+# https://github.com/git-scripts/library
+#
+# Copyright 2017 @git-scripts
+#
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to deal
+# in the Software without restriction, including without limitation the rights
+# to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+# copies of the Software, and to permit persons to whom the Software is furnished
+# to do so, subject to the following conditions:
+#
+# The above copyright notice and this permission notice shall be included in all
+# copies or substantial portions of the Software.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+# OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+
+# Exit if a `git` command doesn't exist in the user's PATH or
+# if we're not in a git repository. This is useful to keep
+# in case the script is ran directly, instead of through the git CLI.
+if  ! command -v git > /dev/null 2>&1 ||
+    ! command git rev-parse --git-dir > /dev/null 2>&1;
+    then exit; fi
+
+
+# Get the branch name. Defaults to master
+# This needs to be checked against detached heads
+branchName=$(git rev-parse --abbrev-ref --verify --quiet HEAD 2>&1 || echo "master")
+
+# Get the user email, exit if empty
+user=$(git config --get user.email)
+[ -z "$user" ] && log fatal "Unable to determine valid 'user.email' from git configuration."
+
+# Get the shelf branch name
+shelfBranch="shelf/$user/$branchName"
+
+# fetch origin if the shelf's ref doesn't exist locally
+# this enables us to merge changes in, in the event that the same
+# user is unstashing the branch on a different machine, where the stash
+# commit doesn't exist
+if ! command git branch --all | grep "remotes/origin/$shelfBranch" > /dev/null 2>&1; then
+    git fetch origin
+fi
+
+if command git branch --all | grep "remotes/origin/$shelfBranch" > /dev/null 2>&1; then
+    # stash local changes if any exist
+    if ! command git diff-index --exit-code HEAD > /dev/null 2>&1; then
+        echo
+        echo "Stashing local changes..."
+        echo
+        git -c commit.gpgsign=false stash --include-untracked
+    fi
+
+    diffContent=$(git diff ..origin/"$shelfBranch")
+    if [ ! "$diffContent" = "" ]; then
+        git pull origin "$shelfBranch"
+    fi
+
+    # delete the shelf branch on the remote
+    git push --delete origin "$shelfBranch"
+
+    # reset the shelf commit
+    if ! command git reset --soft HEAD~1; then
+        # if we can't reset the shelf commit the easy way,
+        # that means it's the first commit in the repository.
+        # we need to delete the ref and reset instead.
+        git update-ref -d HEAD
+    fi
+    git reset
+
+    # remove the shelf configuration key
+    git config --unset branch."$branchName".shelf
+
+    # remove the branch's section if there aren't any remaining keys
+    sectionContent=$(git config --get-regexp branch."$branchName".*)
+    if [ "$sectionContent" = "" ]; then
+        git config --remove-section branch."$branchName"
+    fi
+else
+    echo "It doesn't look like this branch is shelved."
+    echo "If you think you are seeing this message in error, please"
+    echo "file a bug report at:"
+    echo
+    echo "https://github.com/bddenhartog/git-extensions/issues"
+fi;
