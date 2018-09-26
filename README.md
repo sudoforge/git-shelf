@@ -18,9 +18,19 @@ is formatted as `shelf/you@domain.com/branch-name`.
 
 ## Installation
 
-Place both `git-shelf` and `git-unshelf` as executables somewhere in your path.
-They will become automatically available as the `git shelf` and `git unshelf`
-subcommands!
+Obtain the source by cloning [this repository][repo-uri] or by downloading a
+tarball of a [release][repo-releases]. Then run `make install` from the source
+root.
+
+```
+$ git clone https://github.com/sudoforge/git-shelf.git
+$ cd git-shelf
+$ git checkout $(git describe --tags $(git rev-list --tags --max-count=1))
+$ [sudo] make install
+```
+
+[repo-uri]: https://github.com/sudoforge/git-shelf.git
+[repo-releases]: https://github.com/sudoforge/git-shelf/releases
 
 ## Usage
 
