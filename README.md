@@ -18,7 +18,15 @@ is formatted as `shelf/you@domain.com/branch-name`.
 
 ## Installation
 
-Obtain the source by cloning [this repository][repo-uri] or by downloading a
+### Arch Linux
+
+* [git-shelf][aurpkg]
+
+[aurpkg]: https://aur.archlinux.org/packages/git-shelf
+
+### Build from source
+
+Obtain the source by cloning [this repository][repo-uri] or by downloading the
 tarball of a [release][repo-releases]. Then run `make install` from the source
 root.
 
