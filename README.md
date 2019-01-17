@@ -18,17 +18,21 @@ is formatted as `shelf/you@domain.com/branch-name`.
 
 ## Installation
 
-### Arch Linux
+### Pre-built packages
 
-* [git-shelf][aurpkg]
+Packages are available for the following distributions:
 
-[aurpkg]: https://aur.archlinux.org/packages/git-shelf
+* **Arch Linux**: [`aur/git-shelf`][archlinux/aur/git-shelf]
+
+[archlinux/aur/git-shelf]: https://aur.archlinux.org/packages/git-shelf
+
+For other distributions, see below.
 
 ### Build from source
 
-Obtain the source by cloning [this repository][repo-uri] or by downloading the
-tarball of a [release][repo-releases]. Then run `make install` from the source
-root.
+Obtain the source by cloning [this repository][gh/sudoforge/git-shelf] or
+by downloading the tarball of a [release][gh/sudoforge/git-shelf/releases].
+Then run `make install` from the source root.
 
 ```
 $ git clone https://github.com/sudoforge/git-shelf.git
@@ -37,18 +41,20 @@ $ git checkout $(git describe --tags $(git rev-list --tags --max-count=1))
 $ [sudo] make install
 ```
 
-[repo-uri]: https://github.com/sudoforge/git-shelf.git
-[repo-releases]: https://github.com/sudoforge/git-shelf/releases
+[gh/sudoforge/git-shelf]: https://github.com/sudoforge/git-shelf.git
+[gh/sudoforge/git-shelf/releases]: https://github.com/sudoforge/git-shelf/releases
 
 ## Usage
 
 `git shelf`
+
 - To store your local changes on your remote, simply run `git shelf`. This 
 creates a local commit with your changes (and the message `SHELF`), and 
 creates a new branch on `origin`, aptly named 
 `shelf/you@domain.com/your-original-branch-name`. That's all there is to it!
 
 `git unshelf`
+
 - To undo the local shelf commit and delete the remote branch, run `git
 unshelf`. This can be ran from _any_ machine, as long as you have the same
 `user.email` set in your `.gitconfig`, and as long as you are checked out
