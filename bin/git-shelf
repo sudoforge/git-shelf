@@ -168,6 +168,7 @@ git add -A
 if command git -c commit.gpgsign=false commit $amend -m "SHELF"; then
     # Create the shelf branch on the remote
     # and update the shelf configuration key if successful
+    ref_sha=$(git rev-parse HEAD)
     git push "$REMOTE_NAME" $force "$ref":"$shelf" && \
-    git config --local branch."$ref".shelf true
+    git config --local "branch.${ref}.shelf" "$ref_sha"
 fi
