@@ -10,7 +10,7 @@ install:
 	@mkdir -p $(DESTDIR)$(BINPREFIX)
 	@$(foreach COMMAND, $(COMMANDS), \
 		echo "... installing $(COMMAND) to $(DESTDIR)$(BINPREFIX)/$(COMMAND)"; \
-		install -Dm755 "./bin/$(COMMAND)" "$(DESTDIR)$(BINPREFIX)/$(COMMAND)"; \
+		install -m755 "./bin/$(COMMAND)" "$(DESTDIR)$(BINPREFIX)/$(COMMAND)"; \
 	)
 
 .PHONY: default install
