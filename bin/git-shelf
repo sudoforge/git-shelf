@@ -141,7 +141,7 @@ if command git config --get branch."$ref".shelf > /dev/null 2>&1; then
     force="--force"
     shelf_remote=$(git branch --all |\
             grep "$shelf" |\
-            sed 's/^\s*remotes\/\([a-zA-Z0-9]\+\)\/.*/\1/')
+            sed 's/^ *remotes\/\([a-zA-Z0-9]*\)\/.*/\1/')
 
     [ -z "$shelf_remote" ] &&\
         log fatal "$ref is marked as already shelved, but '$shelf' isn't on a remote.'"
