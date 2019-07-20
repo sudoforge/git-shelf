@@ -92,5 +92,5 @@ else
     echo "If you think you are seeing this message in error, please"
     echo "file a bug report at:"
     echo
-    echo "https://github.com/bddenhartog/git-extensions/issues"
+    echo "https://github.com/sudoforge/git-shelf/issues"
 fi;
