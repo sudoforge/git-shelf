@@ -37,21 +37,25 @@ Then run `make install` from the source root.
 ```
 $ git clone https://github.com/sudoforge/git-shelf.git
 $ cd git-shelf
-$ git checkout $(git describe --tags $(git rev-list --tags --max-count=1))
+```
 
+#### Linux
+
+```
 $ [sudo] make install
 ```
 
-*NOTE*: By default, installation attempts to place the executables into
-`/usr/bin`. You can override this behavior if needed, such as when you are not
-running as root (via `sudo` or otherwise) like so:
+
+#### BSD (and derivatives like OSX)
 
 ```
-$ make PREFIX=<path> install
+$ PREFIX=/usr/local make install
 ```
 
-Where `<path>` is a location that your user can write to, such as `/usr/local`.
-*Do not include a trailing slash (`/`).
+#### Other
+
+As you can see from above, the standard `PREFIX= make install` pattern is
+supported. Plop it anywhere in your `PATH`!
 
 [gh/sudoforge/git-shelf]: https://github.com/sudoforge/git-shelf.git
 [gh/sudoforge/git-shelf/releases]: https://github.com/sudoforge/git-shelf/releases
